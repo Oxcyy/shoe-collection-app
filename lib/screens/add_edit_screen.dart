@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/shoe.dart';
 
 class AddEditScreen extends StatefulWidget {
@@ -11,6 +12,7 @@ class AddEditScreen extends StatefulWidget {
 
 class _AddEditScreenState extends State<AddEditScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _supabase = Supabase.instance.client;
 
   late TextEditingController _namaController;
   late TextEditingController _merekController;
@@ -25,6 +27,7 @@ class _AddEditScreenState extends State<AddEditScreen> {
     'Bagus',
     'Bekas',
   ];
+  bool _isLoading = false;
 
   bool get isEditing => widget.shoe != null;
 
@@ -50,19 +53,51 @@ class _AddEditScreenState extends State<AddEditScreen> {
     super.dispose();
   }
 
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
-      final shoe = Shoe(
-        id: widget.shoe?.id,
-        nama: _namaController.text.trim(),
-        merek: _merekController.text.trim(),
-        ukuran: _ukuranController.text.trim(),
-        warna: _warnaController.text.trim(),
-        kondisi: _kondisi,
-        harga: _hargaController.text.trim(),
-        createdAt: widget.shoe?.createdAt,
-      );
-      Navigator.pop(context, shoe);
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    final data = {
+      'nama': _namaController.text.trim(),
+      'merek': _merekController.text.trim(),
+      'ukuran': _ukuranController.text.trim(),
+      'warna': _warnaController.text.trim(),
+      'kondisi': _kondisi,
+      'harga': _hargaController.text.trim(),
+    };
+
+    try {
+      if (isEditing) {
+        await _supabase.from('shoes').update(data).eq('id', widget.shoe!.id!);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sepatu berhasil diupdate!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        await _supabase.from('shoes').insert(data);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sepatu berhasil ditambahkan!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -72,15 +107,10 @@ class _AddEditScreenState extends State<AddEditScreen> {
       hintText: hint,
       prefixIcon: Icon(icon, color: const Color(0xFF1A1A2E)),
       filled: true,
-      fillColor: Colors.grey.shade50,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0xFF1A1A2E), width: 2),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
       ),
     );
   }
@@ -88,7 +118,6 @@ class _AddEditScreenState extends State<AddEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: Text(isEditing ? '✏️ Edit Sepatu' : '➕ Tambah Sepatu'),
       ),
@@ -160,8 +189,12 @@ class _AddEditScreenState extends State<AddEditScreen> {
                   Icons.straighten_outlined,
                 ),
                 keyboardType: TextInputType.number,
-                validator: (v) =>
-                    v!.trim().isEmpty ? 'Ukuran wajib diisi' : null,
+                validator: (v) {
+                  if (v!.trim().isEmpty) return 'Ukuran wajib diisi';
+                  if (int.tryParse(v.trim()) == null)
+                    return 'Ukuran harus berupa angka';
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -179,12 +212,16 @@ class _AddEditScreenState extends State<AddEditScreen> {
                 controller: _hargaController,
                 decoration: _inputDeco(
                   'Harga (Rp) *',
-                  'cth: 1.500.000',
+                  'cth: 1500000',
                   Icons.attach_money_outlined,
                 ),
                 keyboardType: TextInputType.number,
-                validator: (v) =>
-                    v!.trim().isEmpty ? 'Harga wajib diisi' : null,
+                validator: (v) {
+                  if (v!.trim().isEmpty) return 'Harga wajib diisi';
+                  if (int.tryParse(v.trim()) == null)
+                    return 'Harga harus berupa angka';
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
@@ -197,7 +234,7 @@ class _AddEditScreenState extends State<AddEditScreen> {
               ),
               const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: _submit,
+                onPressed: _isLoading ? null : _submit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFE94560),
                   foregroundColor: Colors.white,
@@ -206,13 +243,15 @@ class _AddEditScreenState extends State<AddEditScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: Text(
-                  isEditing ? 'Simpan Perubahan' : 'Tambah ke Koleksi',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : Text(
+                        isEditing ? 'Simpan Perubahan' : 'Tambah ke Koleksi',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
               const SizedBox(height: 12),
               OutlinedButton(
@@ -222,12 +261,8 @@ class _AddEditScreenState extends State<AddEditScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  side: const BorderSide(color: Color(0xFF1A1A2E)),
                 ),
-                child: const Text(
-                  'Batal',
-                  style: TextStyle(color: Color(0xFF1A1A2E), fontSize: 16),
-                ),
+                child: const Text('Batal', style: TextStyle(fontSize: 16)),
               ),
             ],
           ),

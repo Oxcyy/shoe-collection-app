@@ -1,12 +1,12 @@
 class Shoe {
-  int? id;
+  String? id;
   String nama;
   String merek;
   String ukuran;
   String warna;
   String kondisi;
   String harga;
-  DateTime createdAt;
+  DateTime? createdAt;
 
   Shoe({
     this.id,
@@ -16,28 +16,32 @@ class Shoe {
     required this.warna,
     required this.kondisi,
     required this.harga,
-    DateTime? createdAt,
-  }) : createdAt = createdAt ?? DateTime.now();
+    this.createdAt,
+  });
 
-  Shoe copyWith({
-    int? id,
-    String? nama,
-    String? merek,
-    String? ukuran,
-    String? warna,
-    String? kondisi,
-    String? harga,
-    DateTime? createdAt,
-  }) {
+  factory Shoe.fromMap(Map<String, dynamic> map) {
     return Shoe(
-      id: id ?? this.id,
-      nama: nama ?? this.nama,
-      merek: merek ?? this.merek,
-      ukuran: ukuran ?? this.ukuran,
-      warna: warna ?? this.warna,
-      kondisi: kondisi ?? this.kondisi,
-      harga: harga ?? this.harga,
-      createdAt: createdAt ?? this.createdAt,
+      id: map['id']?.toString(),
+      nama: map['nama'] ?? '',
+      merek: map['merek'] ?? '',
+      ukuran: map['ukuran'] ?? '',
+      warna: map['warna'] ?? '',
+      kondisi: map['kondisi'] ?? '',
+      harga: map['harga'] ?? '',
+      createdAt: map['created_at'] != null
+          ? DateTime.parse(map['created_at'])
+          : null,
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'nama': nama,
+      'merek': merek,
+      'ukuran': ukuran,
+      'warna': warna,
+      'kondisi': kondisi,
+      'harga': harga,
+    };
   }
 }

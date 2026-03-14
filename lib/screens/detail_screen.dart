@@ -17,7 +17,6 @@ class DetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: const Text('Detail Sepatu'),
         actions: [
@@ -116,7 +115,7 @@ class DetailScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
@@ -148,7 +147,7 @@ class DetailScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
@@ -170,7 +169,11 @@ class DetailScreen extends StatelessWidget {
                           child: _infoItem(
                             Icons.calendar_today_outlined,
                             'Ditambahkan',
-                            DateFormat('dd MMM yyyy').format(shoe.createdAt),
+                            shoe.createdAt != null
+                                ? DateFormat(
+                                    'dd MMM yyyy',
+                                  ).format(shoe.createdAt!)
+                                : '-',
                           ),
                         ),
                       ],
